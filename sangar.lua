@@ -1,29 +1,15 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
--- Ganti dengan webhook URL Discord kamu
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1440706799002189998/zVyfFMoV0BRgn3YFC97OXmb8WcbnHJBPX0j-zOsOi7w8j4lddLR4dCuRPgaPcniyKTyd"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1477626808160489593/NkdAmbmx55b3Hu--jees1G238Chvi5f5PwD3PC4Iqd_kLjfTBd0hJZKAB-QUrO-os9jg" -- regenerate dulu yang lama
 
--- Delay biar player sempat masuk dulu sebelum di-list (server baru start biasanya masih kosong sesaat)
-local STARTUP_DELAY = 5 -- detik
-
-local function sendWebhook(playerList)
-	local description = ""
-
-	if #playerList == 0 then
-		description = "Belum ada player saat startup."
-	else
-		for _, entry in ipairs(playerList) do
-			description = description .. string.format("**%s** — `%s`\n", entry.Username, entry.UserId)
-		end
-	end
-
+local function sendJoinAlert(player)
 	local payload = {
 		embeds = {
 			{
-				title = "Server Started — Player List",
-				description = description,
-				color = 3066993, -- hijau
+				title = "⚠️ Player Joined",
+				description = string.format("**%s** — `%s`", player.Name, player.UserId),
+				color = 15158332, -- merah
 				footer = {
 					text = "PlaceId: " .. tostring(game.PlaceId) .. " | JobId: " .. tostring(game.JobId)
 				},
@@ -45,16 +31,4 @@ local function sendWebhook(playerList)
 	end
 end
 
-task.spawn(function()
-	task.wait(STARTUP_DELAY)
-
-	local playerList = {}
-	for _, player in ipairs(Players:GetPlayers()) do
-		table.insert(playerList, {
-			Username = player.Name,
-			UserId = player.UserId
-		})
-	end
-
-	sendWebhook(playerList)
-end)
+Players.PlayerAdded:Connect(sendJoinAlert)
