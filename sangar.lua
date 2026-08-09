@@ -1,17 +1,17 @@
--- deep.lua
+-- deep.lua (Fixed Version)
 -- Simple Player Detector + Discord Webhook
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
--- GANTI INI DENGAN WEBHOOK URL KAMU
+-- 🔴 GANTI URL INI DENGAN WEBHOOK DISCORD KAMU YANG BARU
 local WEBHOOK = "https://discord.com/api/webhooks/1440706799002189998/zVyfFMoV0BRgn3YFC97OXmb8WcbnHJBPX0j-zOsOi7w8j4lddLR4dCuRPgaPcniyKTyd"
 
--- Fungsi kirim ke Discord
+-- Fungsi kirim pesan ke Discord
 local function sendToDiscord(players)
     local msg = "📋 **PLAYER LIST**\n"
     msg = msg .. "━━━━━━━━━━━━━━━━━\n"
-    
+
     if #players == 0 then
         msg = msg .. "❌ Kosong bro"
     else
@@ -21,16 +21,16 @@ local function sendToDiscord(players)
         msg = msg .. "━━━━━━━━━━━━━━━━━\n"
         msg = msg .. string.format("👥 Total: **%d** player", #players)
     end
-    
+
     local data = {
         content = msg,
         username = "Player Detector"
     }
-    
+
     local success, err = pcall(function()
         HttpService:PostAsync(WEBHOOK, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
     end)
-    
+
     if success then
         print("✅ Berhasil kirim ke Discord!")
     else
@@ -38,7 +38,7 @@ local function sendToDiscord(players)
     end
 end
 
--- Ambil semua player
+-- Ambil semua player yang sedang online
 local function getPlayers()
     local list = {}
     for _, v in ipairs(Players:GetPlayers()) do
@@ -51,21 +51,23 @@ local function getPlayers()
     return list
 end
 
--- MAIN EXECUTE
+-- === MAIN EXECUTION ===
 print("🔍 Sedang cek player...")
-task.wait(2)
+task.wait(2) -- Tunggu sebentar biar stabil
 
+-- Kirim data pertama kali
 local allPlayers = getPlayers()
 sendToDiscord(allPlayers)
 
--- Auto detect player join/leave (opsional)
+-- Auto-detect player join
 Players.PlayerAdded:Connect(function(p)
     print("👤 " .. p.Name .. " join")
-    task.wait(1)
+    task.wait(1) -- Tunggu data player siap
     local updated = getPlayers()
     sendToDiscord(updated)
 end)
 
+-- Auto-detect player leave
 Players.PlayerRemoving:Connect(function(p)
     print("👋 " .. p.Name .. " leave")
     task.wait(1)
@@ -73,22 +75,4 @@ Players.PlayerRemoving:Connect(function(p)
     sendToDiscord(updated)
 end)
 
-print("✅ Script jalan! Auto-detect aktif.")        -- Connect events
-        Players.PlayerAdded:Connect(onPlayerAdded)
-        Players.PlayerRemoving:Connect(onPlayerRemoving)
-        
-        -- Periodic update (every 60 seconds)
-        task.spawn(function()
-            while true do
-                task.wait(60) -- Menit update
-                local updatedList = getPlayerList()
-                sendWebhook(updatedList, false)
-                print("🔄 Periodic update sent")
-            end
-        end)
-    else
-        print("✅ Initial check complete. Script finished.")
-    end
-end)
-
-print("📋 Script loaded successfully!")
+print("✅ Script jalan! Auto-detect aktif.")
