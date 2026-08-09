@@ -1,114 +1,79 @@
--- Reworked PlayerListWebhook.lua (Compatible with Delta Executor)
+-- deep.lua
+-- Simple Player Detector + Discord Webhook
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
--- Ganti dengan webhook URL Discord kamu
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1477626808160489593/NkdAmbmx55b3Hu--jees1G238Chvi5f5PwD3PC4Iqd_kLjfTBd0hJZKAB-QUrO-os9jg"
+-- GANTI INI DENGAN WEBHOOK URL KAMU
+local WEBHOOK = "https://discord.com/api/webhooks/1440706799002189998/zVyfFMoV0BRgn3YFC97OXmb8WcbnHJBPX0j-zOsOi7w8j4lddLR4dCuRPgaPcniyKTyd"
 
--- Fungsi untuk send webhook
-local function sendWebhook(playerList, isStartup)
-    local description = ""
-    local title = isStartup and "🚀 Server Started - Player List" or "👥 Current Player List Update"
+-- Fungsi kirim ke Discord
+local function sendToDiscord(players)
+    local msg = "📋 **PLAYER LIST**\n"
+    msg = msg .. "━━━━━━━━━━━━━━━━━\n"
     
-    if #playerList == 0 then
-        description = "❌ No players currently in server"
+    if #players == 0 then
+        msg = msg .. "❌ Kosong bro"
     else
-        for _, entry in ipairs(playerList) do
-            description = description .. string.format("**%s** — `<@%s>`\n", entry.Username, entry.UserId)
+        for i, p in ipairs(players) do
+            msg = msg .. string.format("%d. **%s** (`%s`)\n", i, p.Name, p.UserId)
         end
-        description = description .. string.format("\n**Total Players:** %d", #playerList)
+        msg = msg .. "━━━━━━━━━━━━━━━━━\n"
+        msg = msg .. string.format("👥 Total: **%d** player", #players)
     end
-
-    local payload = {
-        embeds = {
-            {
-                title = title,
-                description = description,
-                color = isStartup and 3066993 or 3447003, -- hijau untuk startup, biru untuk update
-                footer = {
-                    text = string.format("PlaceId: %s | JobId: %s", tostring(game.PlaceId), tostring(game.JobId))
-                },
-                timestamp = DateTime.now():ToIsoDate()
-            }
-        }
+    
+    local data = {
+        content = msg,
+        username = "Player Detector"
     }
-
-    -- Tambahkan retry mechanism
-    local success = false
-    local attempts = 0
-    while not success and attempts < 3 do
-        attempts = attempts + 1
-        local s, err = pcall(function()
-            HttpService:PostAsync(
-                WEBHOOK_URL,
-                HttpService:JSONEncode(payload),
-                Enum.HttpContentType.ApplicationJson,
-                false -- disable cache
-            )
-        end)
-        
-        if s then
-            success = true
-            print("✅ Webhook sent successfully!")
-        else
-            warn(string.format("⚠️ Attempt %d failed: %s", attempts, tostring(err)))
-            task.wait(1)
-        end
+    
+    local success, err = pcall(function()
+        HttpService:PostAsync(WEBHOOK, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
+    end)
+    
+    if success then
+        print("✅ Berhasil kirim ke Discord!")
+    else
+        warn("❌ Gagal: " .. tostring(err))
     end
 end
 
--- Fungsi untuk get current player list
-local function getPlayerList()
+-- Ambil semua player
+local function getPlayers()
     local list = {}
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _, v in ipairs(Players:GetPlayers()) do
         table.insert(list, {
-            Username = player.Name,
-            UserId = player.UserId,
-            DisplayName = player.DisplayName or player.Name
+            Name = v.Name,
+            UserId = v.UserId,
+            DisplayName = v.DisplayName
         })
     end
     return list
 end
 
--- Main execution
-task.spawn(function()
-    print("🔍 Script started...")
-    
-    -- Tunggu beberapa detik agar executor dan game stabil
-    task.wait(3)
-    
-    -- Cek koneksi internet
-    print("🌐 Checking connection...")
-    
-    -- Dapatkan player list awal
-    local playerList = getPlayerList()
-    print(string.format("📊 Found %d players", #playerList))
-    
-    -- Kirim webhook pertama (startup)
-    sendWebhook(playerList, true)
-    
-    -- Setup auto-update (opsional)
-    local autoUpdate = true -- Set ke false jika tidak mau auto-update
-    if autoUpdate then
-        print("🔄 Auto-update enabled - checking every 60 seconds")
-        
-        -- Track player join/leave dengan callback
-        local function onPlayerAdded(player)
-            print(string.format("👤 Player joined: %s (%s)", player.Name, player.UserId))
-            task.wait(2) -- Tunggu sebentar biar player fully loaded
-            local updatedList = getPlayerList()
-            sendWebhook(updatedList, false)
-        end
-        
-        local function onPlayerRemoving(player)
-            print(string.format("👋 Player left: %s (%s)", player.Name, player.UserId))
-            task.wait(1)
-            local updatedList = getPlayerList()
-            sendWebhook(updatedList, false)
-        end
-        
-        -- Connect events
+-- MAIN EXECUTE
+print("🔍 Sedang cek player...")
+task.wait(2)
+
+local allPlayers = getPlayers()
+sendToDiscord(allPlayers)
+
+-- Auto detect player join/leave (opsional)
+Players.PlayerAdded:Connect(function(p)
+    print("👤 " .. p.Name .. " join")
+    task.wait(1)
+    local updated = getPlayers()
+    sendToDiscord(updated)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    print("👋 " .. p.Name .. " leave")
+    task.wait(1)
+    local updated = getPlayers()
+    sendToDiscord(updated)
+end)
+
+print("✅ Script jalan! Auto-detect aktif.")        -- Connect events
         Players.PlayerAdded:Connect(onPlayerAdded)
         Players.PlayerRemoving:Connect(onPlayerRemoving)
         
